@@ -441,7 +441,7 @@ function gPlanol(B){
 function gQuiSoc(B){
   const cats=["Totes",...new Set(VOC.map(v=>v.c))];
   let cat=store.get("qcat","Totes");
-  const pool=VOC.filter(v=>cat==="Totes"||v.c===cat);
+  const pool=(typeof MP!=="undefined"&&MP.active)?MP.filter("voc",VOC):VOC.filter(v=>cat==="Totes"||v.c===cat);
   const qs=shuffle(pool).slice(0,Math.min(10,pool.length));
   let n=0,ok=0;
   B.innerHTML=`<h2>Qui soc?</h2><p class="sub">Llegeix la definició i tria la paraula correcta. Amb 4 encerts seguits els punts es dupliquen; amb 8, es tripliquen.</p>
@@ -473,7 +473,7 @@ const PAIRS=[["compressio","Compressió"],["traccio","Tracció"],["flexio","Flex
  ["monobuc","Monobuc"],["catamara","Catamarà"],["trimara","Trimarà"],["bucv","Buc en V"],["bucpla","Buc pla"],["bucrodo","Buc rodó"],["multibuc","Multibuc"],
  ["fibra","Fibra de vidre"],["polietile","Polietilè"],["metall","Metall"],["pneumatica","Pneumàtica"],["fusta","Fusta"],["flybridge","Flybridge"],["sentina","Sentina"]];
 function gParelles(B){
-  const set=shuffle(PAIRS).slice(0,8);
+  const set=((typeof MP!=="undefined"&&MP.active)?MP.filter("pairs",PAIRS):shuffle(PAIRS)).slice(0,8);
   const cards=shuffle(set.flatMap(([k,t])=>[{k,img:PH[k]},{k,t}]));
   let open=[],moves=0,found=0,lock=false;
   B.innerHTML=`<h2>Parelles</h2><p class="sub">Gira dues cartes: una imatge i el seu nom. Si fan parella, es queden girades.</p>
@@ -528,7 +528,7 @@ function gClassifica(B){
 /* ================= JOC 5: via d'aigua ================= */
 const HWORDS=VOC.filter(v=>v.t.length<=18&&!/[’']/.test(v.t));
 function gPenjat(B){
-  const W=shuffle(HWORDS)[0], target=norm(W.t);
+  const W=shuffle((typeof MP!=="undefined"&&MP.active)?MP.filter("voc",HWORDS):HWORDS)[0], target=norm(W.t);
   const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   let fails=0,MAX=6,shown=new Set(),won=false;
   const need=new Set([...target].filter(ch=>/[A-ZÇ]/.test(ch)));
@@ -590,7 +590,7 @@ body.mp #tabs,body.mp #picker{pointer-events:none;opacity:.45}
 #mpL h2{font-family:var(--display);font-weight:800;font-size:2.2rem;text-transform:uppercase;margin:0;line-height:1}
 #mpL .lead{color:var(--muted);margin:-6px 0 0;font-size:1rem}
 #mpL .fld{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:10px}
-#mpL .fld>label,#mpL .fld>.lab{font-family:var(--display);font-weight:700;font-size:1.15rem;text-transform:uppercase;letter-spacing:.05em}
+#mpL .fld>label,#mpL .fld>.lab,#mpL .sub2 .lab{font-family:var(--display);font-weight:700;font-size:1.15rem;text-transform:uppercase;letter-spacing:.05em}
 #mpL .step{display:flex;align-items:center;gap:14px}
 #mpL .step button{width:52px;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--chip);font-size:1.8rem;font-weight:700;line-height:1}
 #mpL .step output{font-family:var(--display);font-weight:800;font-size:2.4rem;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
@@ -600,6 +600,10 @@ body.mp #tabs,body.mp #picker{pointer-events:none;opacity:.45}
 #mpL .chips{display:flex;flex-wrap:wrap;gap:8px}
 #mpL .chips button{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:10px 16px;font-family:var(--display);font-size:1.15rem;font-weight:700}
 #mpL .chips button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+#mpL .chips button:disabled{opacity:.4;text-decoration:line-through}
+#mpL .warn{color:var(--red);font-weight:700}
+#mpL .fld .sub2{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+#mpL .fld .sub2 button{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:.9rem;padding:4px}
 #mpL .note{color:var(--muted);font-size:.95rem}
 #mpL .go{width:100%;background:var(--navy);color:#fff;border:0;border-radius:14px;padding:16px;font-family:var(--display);font-weight:800;font-size:1.5rem;letter-spacing:.04em;text-transform:uppercase}
 #mpL .go.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -651,9 +655,15 @@ const MP=(function(){
   const $$=s=>(document.getElementById("mpL").querySelector(s)||document.querySelector(s));
   const L=$$("#mpL");
   const ORDER=["planol","quisoc","parelles","classifica","penjat"];
+  const THEMES=[...new Set(VOC.map(v=>v.c))];
+  const PLAN_T={estructura:"Estructura",seccio:"Estructura",rodacodast:"Estructura",espais:"Espais",formes:"Classificació",esforcos:"Esforços"};
+  const SORT_T=["Estructura","Estructura","Esforços","Espais","Manteniment","Materials"];
+  const cOf=t=>(VOC.find(v=>v.t===t)||{}).c||({Monobuc:"Classificació",Metall:"Materials",Fusta:"Materials"})[t];
   const GNAME={planol:"Plànol",quisoc:"Qui soc?",parelles:"Parelles",classifica:"Classifica",penjat:"Via d'aigua"};
   const ST={get(k,d){try{const v=localStorage.getItem("t2mp_"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("t2mp_"+k,JSON.stringify(v))}catch(e){}}};
-  let cfg=ST.get("cfg",{n:2,names:[],total:180,rounds:3});
+  let cfg=Object.assign({n:2,names:[],total:180,rounds:3,games:ORDER.slice(),themes:THEMES.slice()},ST.get("cfg",{}));
+  cfg.games=cfg.games.filter(g=>ORDER.includes(g));cfg.themes=cfg.themes.filter(t=>THEMES.includes(t));
+  if(!cfg.games.length)cfg.games=ORDER.slice();if(!cfg.themes.length)cfg.themes=THEMES.slice();
   let st=null;              // estat de la partida
   let tick=null;
   const api={active:false,running:false,finishing:false,turnId:0,turnMilles:0,words:0,ok:0,ko:0};
@@ -668,7 +678,17 @@ const MP=(function(){
   const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
   const nameOf=i=>(cfg.names[i]||"").trim()||("Jugador "+(i+1));
   const perTurn=()=>Math.max(15,Math.round(cfg.total/cfg.rounds));
-  const gameOfRound=r=>ORDER[r%ORDER.length];
+  const plansOk=()=>PLANS.filter(p=>cfg.themes.includes(PLAN_T[p[0]]));
+  const sortsOk=()=>SORTS.map((x,i)=>i).filter(i=>cfg.themes.includes(SORT_T[i]));
+  const vocOk=()=>VOC.filter(v=>cfg.themes.includes(v.c));
+  function avail(g){
+    if(g==="planol")return plansOk().length>0;
+    if(g==="classifica")return sortsOk().length>0;
+    if(g==="parelles")return PAIRS.filter(p=>cfg.themes.includes(cOf(p[1]))).length>=4;
+    return vocOk().length>0;
+  }
+  const playable=()=>ORDER.filter(g=>cfg.games.includes(g)&&avail(g));
+  const gameOfRound=r=>{const p=playable();return p.length?p[r%p.length]:"quisoc"};
   const board=()=>document.getElementById("stage")||document.getElementById("board");
 
   /* ---------- HUD ---------- */
@@ -694,11 +714,15 @@ const MP=(function(){
       show(`<h2>+ Jugadors</h2><p class="lead">Partida per torns al mateix dispositiu. Guanya qui fa més milles; si hi ha empat, qui ha trigat menys.</p>
       <div class="fld"><span class="lab">Jugadors</span><div class="step"><button id="mpnM" aria-label="Menys jugadors">−</button><output id="mpnV">${cfg.n}</output><button id="mpnP" aria-label="Més jugadors">+</button></div></div>
       <div class="fld"><span class="lab">Noms</span><div class="names">${Array.from({length:cfg.n},(_,i)=>`<input id="nm${i}" maxlength="18" placeholder="Jugador ${i+1}" value="${(cfg.names[i]||"").replace(/"/g,"&quot;")}" aria-label="Nom del jugador ${i+1}">`).join("")}</div></div>
-      <div class="fld"><span class="lab">Temps total per jugador</span><div class="chips">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${cfg.total===v}">${t}</button>`).join("")}</div>
+      <div class="fld"><div class="sub2"><span class="lab">Jocs</span><button id="mpgAll">${cfg.games.length===ORDER.length?"Cap":"Tots"}</button></div><div class="chips" id="mpGames">${ORDER.map(g=>`<button data-g="${g}" aria-pressed="${cfg.games.includes(g)}" ${avail(g)?"":"disabled title='Cap tema d\'aquest joc seleccionat'"}>${GNAME[g]}</button>`).join("")}</div>
+        ${ORDER.some(g=>cfg.games.includes(g)&&!avail(g))?`<div class="note">${ORDER.filter(g=>cfg.games.includes(g)&&!avail(g)).map(g=>GNAME[g]).join(", ")}: no tenen prou contingut amb aquests temes i no sortiran.</div>`:""}</div>
+      <div class="fld"><div class="sub2"><span class="lab">Temes</span><button id="mptAll">${cfg.themes.length===THEMES.length?"Cap":"Tots"}</button></div><div class="chips" id="mpThemes">${THEMES.map(t=>`<button data-t="${esc(t)}" aria-pressed="${cfg.themes.includes(t)}">${esc(t)}</button>`).join("")}</div>
+        ${playable().length?"":`<div class="note warn">Tria com a mínim un joc i un tema que hi encaixi.</div>`}</div>
+      <div class="fld"><span class="lab">Temps total per jugador</span><div class="chips" id="mpTime">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${cfg.total===v}">${t}</button>`).join("")}</div>
         <div class="note">${cfg.rounds} rondes → <b>${fmt(perTurn())}</b> per torn.</div></div>
       <div class="fld"><span class="lab">Rondes</span><div class="step"><button id="mprM" aria-label="Menys rondes">−</button><output id="mprV">${cfg.rounds}</output><button id="mprP" aria-label="Més rondes">+</button></div>
         <ol class="rl">${Array.from({length:cfg.rounds},(_,r)=>`<li>${GNAME[gameOfRound(r)]}</li>`).join("")}</ol></div>
-      <p class="note">Si acabes el repte abans d'hora, els segons que et sobren sumen milles segons el teu percentatge d'encerts (amb un 100%, 1 milla per segon).</p>
+      <p class="note">Si acabes un repte abans d'hora, els segons que et sobren es guarden per al teu torn següent. A l'últim torn, el temps que sobri es converteix en milles segons el teu percentatge d'encerts (amb un 100%, 1 milla per segon).</p>
       <button class="go" id="mpgoB">Comença la partida</button>
       <button class="go alt" id="mpcancelB">Tanca</button>`);
       const keepNames=()=>{for(let i=0;i<cfg.n;i++){const e=document.getElementById("nm"+i);if(e)cfg.names[i]=e.value}};
@@ -706,25 +730,32 @@ const MP=(function(){
       $$("#mpnP").onclick=()=>{keepNames();cfg.n=Math.min(10,cfg.n+1);draw()};
       $$("#mprM").onclick=()=>{keepNames();cfg.rounds=Math.max(1,cfg.rounds-1);draw()};
       $$("#mprP").onclick=()=>{keepNames();cfg.rounds=Math.min(10,cfg.rounds+1);draw()};
-      L.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>{keepNames();cfg.total=+b.dataset.v;draw()});
+      L.querySelectorAll("#mpTime button").forEach(b=>b.onclick=()=>{keepNames();cfg.total=+b.dataset.v;draw()});
+      const tog=(arr,v)=>arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];
+      L.querySelectorAll("#mpGames button").forEach(b=>b.onclick=()=>{keepNames();cfg.games=tog(cfg.games,b.dataset.g);draw()});
+      L.querySelectorAll("#mpThemes button").forEach(b=>b.onclick=()=>{keepNames();cfg.themes=tog(cfg.themes,b.dataset.t);draw()});
+      $$("#mpgAll").onclick=()=>{keepNames();cfg.games=cfg.games.length===ORDER.length?[]:ORDER.slice();draw()};
+      $$("#mptAll").onclick=()=>{keepNames();cfg.themes=cfg.themes.length===THEMES.length?[]:THEMES.slice();draw()};
+      if(!playable().length){const g=$$("#mpgoB");g.disabled=true;g.style.opacity=.4}
       $$("#mpcancelB").onclick=()=>{keepNames();ST.set("cfg",cfg);hide()};
-      $$("#mpgoB").onclick=()=>{keepNames();cfg.names=cfg.names.slice(0,cfg.n);ST.set("cfg",cfg);begin()};
+      $$("#mpgoB").onclick=()=>{if(!playable().length)return;keepNames();cfg.names=cfg.names.slice(0,cfg.n);ST.set("cfg",cfg);begin()};
     };
     draw();
   }
 
   /* ---------- partida ---------- */
   function begin(){
-    st={players:Array.from({length:cfg.n},(_,i)=>({name:nameOf(i),milles:0,time:0,turns:[]})),round:0,turn:0,secs:perTurn()};
+    st={players:Array.from({length:cfg.n},(_,i)=>({name:nameOf(i),milles:0,time:0,bank:0,turns:[]})),round:0,turn:0,secs:perTurn()};
     api.active=true;document.body.classList.add("mp");intro();
   }
   function intro(){
     api.running=false;
     const p=st.players[st.turn],g=gameOfRound(st.round);
+    st.secs=perTurn()+p.bank;
     show(`<div class="big"><span class="k">Ronda ${st.round+1} de ${cfg.rounds}</span>
       <span class="g"><i></i>${GNAME[g]}</span>
       <span class="k" style="margin-top:18px">Torn de</span><span class="n">${esc(p.name)}</span>
-      <p class="note">${st.turn>0||st.round>0?"Passa el dispositiu a "+esc(p.name)+". ":""}Tens ${fmt(st.secs)}.${g==="penjat"?" Endevina 3 paraules.":""}</p></div>
+      <p class="note">${st.turn>0||st.round>0?"Passa el dispositiu a "+esc(p.name)+". ":""}Tens <b>${fmt(st.secs)}</b>${p.bank>0?` (${fmt(perTurn())} + ${fmt(p.bank)} guardats)`:""}.${g==="penjat"?" Endevina 3 paraules.":""}</p></div>
       <button class="go" id="mpgoT">Som-hi!</button>`);
     $$("#mpgoT").onclick=startTurn;
   }
@@ -732,6 +763,8 @@ const MP=(function(){
     hide();
     const g=gameOfRound(st.round);
     current=g;
+    if(g==="planol"){const ps=plansOk();planSel=ps[Math.floor(Math.random()*ps.length)][0]}
+    if(g==="classifica"){const ss=sortsOk();sortI=ss[Math.floor(Math.random()*ss.length)]}
     try{(typeof renderTabs==="function"?renderTabs:renderPicker)()}catch(e){}
     streak=0;try{paint()}catch(e){}
     api.turnId++;api.finishing=false;document.querySelectorAll(".float,.toast").forEach(e=>e.remove());
@@ -751,15 +784,16 @@ const MP=(function(){
   }
   function endTurn(finished){
     if(!api.running)return;api.running=false;api.finishing=false;clearInterval(tick);
-    const l=Math.max(0,left()),used=Math.min(st.secs,st.secs-l),acc=api.ok+api.ko?api.ok/(api.ok+api.ko):0,bonus=finished?Math.round(l*acc):0;
-    const p=st.players[st.turn];const got=api.turnMilles+bonus;
+    const l=Math.max(0,left()),used=Math.min(st.secs,st.secs-l),acc=api.ok+api.ko?api.ok/(api.ok+api.ko):0;
+    const p=st.players[st.turn],lastTurn=st.round>=cfg.rounds-1,saved=finished&&!lastTurn?Math.floor(l):0,bonus=finished&&lastTurn?Math.round(l*acc):0;
+    p.bank=saved;const got=api.turnMilles+bonus;
     p.milles+=got;p.time+=used;p.turns.push({g:gameOfRound(st.round),m:api.turnMilles,b:bonus,t:used});
     if(finished&&typeof burst==="function")burst(innerWidth/2,innerHeight/3,60);
     let next=null;
     if(st.turn<st.players.length-1)next=()=>{st.turn++;intro()};
     else if(st.round<cfg.rounds-1)next=()=>{st.turn=0;st.round++;intro()};
     show(`<div class="big"><span class="k">${finished?"Repte completat!":"S'ha acabat el temps!"}</span><span class="n">${esc(p.name)}</span></div>
-      <div class="sc"><div><b>${api.turnMilles}</b><small>milles</small></div><div><b>+${bonus}</b><small>bonus de temps (${Math.round(acc*100)}% encerts)</small></div><div><b>${fmt(used)}</b><small>temps</small></div></div>
+      <div class="sc"><div><b>${api.turnMilles}</b><small>milles</small></div>${lastTurn?`<div><b>+${bonus}</b><small>bonus de temps (${Math.round(acc*100)}% encerts)</small></div>`:`<div><b>+${fmt(saved)}</b><small>guardat per al torn següent</small></div>`}<div><b>${fmt(used)}</b><small>temps</small></div></div>
       <p class="note" style="text-align:center">Total: <b>${p.milles}</b> milles en ${fmt(p.time)}</p>
       ${ranking(false)}
       <button class="go" id="mpnx">${next?"Següent torn":"Mostra el podi"}</button>`);
@@ -811,6 +845,10 @@ const MP=(function(){
     floatTxt(`+${pts}${mult>1?" ×"+mult:""}`,r.left+r.width/2,r.top);burst(r.left+r.width/2,r.top+r.height/2,streak>=4?50:24);tone(true);
     if(typeof buzz==="function")buzz(25);
     try{paint()}catch(e){}
+  };
+  api.filter=function(kind,list){
+    if(kind==="pairs"){const inn=list.filter(p=>cfg.themes.includes(cOf(p[1]))),out=list.filter(p=>!inn.includes(p));return inn.length>=4?shuffle(inn):shuffle(list)}
+    const r=list.filter(v=>cfg.themes.includes(v.c));return r.length?r:list;
   };
   api.done=function(game){
     if(!api.running)return;
