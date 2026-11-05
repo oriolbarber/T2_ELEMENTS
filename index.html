@@ -42,6 +42,13 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .flags i{width:10px;height:14px;border-radius:2px;background:rgba(255,255,255,.18)}
 .flags i.on:nth-child(1){background:var(--red)}.flags i.on:nth-child(2){background:var(--yel)}.flags i.on:nth-child(3){background:var(--teal)}.flags i.on:nth-child(4){background:var(--blue)}.flags i.on:nth-child(5){background:#fff}
 .snd{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 10px;font-size:.78rem;color:#fff;white-space:nowrap}
+@media (max-width:440px){.top-r{gap:6px}.mi span{display:none}.flags i{width:7px;height:12px}.badge{font-size:1.1rem}.snd{padding:6px 8px}}
+@media (max-width:370px){.flags{display:none}}
+.snd.inst{background:var(--yel);border-color:var(--yel);color:#14223a;font-weight:700}
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(10,20,40,.55);display:flex;align-items:flex-end}
+.sheet>div{background:var(--panel);color:var(--ink);width:100%;border-radius:16px 16px 0 0;padding:20px var(--gr) calc(20px + env(safe-area-inset-bottom,0px)) var(--gl);display:grid;gap:12px}
+.sheet h3{margin:0;font-family:var(--display);font-size:1.6rem;text-transform:uppercase}
+.sheet ol{margin:0;padding-left:1.3em;display:grid;gap:8px;font-size:1.05rem}
 .route{position:relative;height:18px;margin-top:8px}
 .route::before{content:"";position:absolute;left:0;right:0;top:11px;border-top:2px dashed rgba(255,255,255,.4)}
 .route .bo{position:absolute;top:7px;width:9px;height:9px;border-radius:50%;background:var(--yel);transform:translateX(-4px)}
@@ -154,6 +161,7 @@ h2{font-family:var(--display);font-weight:800;font-size:1.8rem;text-transform:up
     <div class="badge">MP06 · T2<small>Vocabulari</small></div>
     <div class="mi"><b id="score">0</b><span>milles</span></div>
     <div class="flags" id="flags" title="Encerts seguits"><i></i><i></i><i></i><i></i><i></i></div>
+    <button class="snd inst" id="inst" hidden>Instal·la</button>
     <button class="snd" id="sound" aria-pressed="false">So: no</button>
   </div>
   <div class="route" id="route" aria-hidden="true"><svg id="boat" viewBox="0 0 34 26"><path d="M17 1v16" stroke="#fff" stroke-width="1.6"/><path d="M18 2l9 13h-9z" fill="#fff"/><path d="M16 4l-7 11h7z" fill="#f1c40f"/><path d="M2 18h30l-5 7H7z" fill="#e74c3c"/></svg></div>
@@ -415,6 +423,31 @@ function gPenjat(S){
 renderTabs();paint();start();
 </script>
 
-<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
+<div class="sheet" id="sheet" hidden><div><h3>Instal·la l'app</h3><ol id="steps"></ol><button class="btn" id="sheetok">Entesos</button></div></div>
+<script>
+/* ---------- instal·lació com a app ---------- */
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+(function(){
+  const btn=document.getElementById("inst"),sheet=document.getElementById("sheet"),steps=document.getElementById("steps");
+  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  if(standalone)return;
+  const ua=navigator.userAgent;
+  const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const inApp=/FBAN|FBAV|Instagram|WhatsApp|Line\/|GSA\/|; wv\)/.test(ua);
+  let deferred=null;
+  const help=html=>{steps.innerHTML=html;sheet.hidden=false};
+  document.getElementById("sheetok").onclick=()=>sheet.hidden=true;
+  sheet.onclick=e=>{if(e.target===sheet)sheet.hidden=true};
+  addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;btn.hidden=false});
+  addEventListener("appinstalled",()=>{btn.hidden=true;deferred=null});
+  if(ios||inApp)btn.hidden=false;
+  btn.onclick=async()=>{
+    if(deferred){deferred.prompt();const r=await deferred.userChoice.catch(()=>null);if(r&&r.outcome==="accepted")btn.hidden=true;deferred=null;return}
+    if(inApp)help("<li>Aquesta pàgina està oberta dins d'una altra app (WhatsApp, Instagram…), que no deixa instal·lar.</li><li>Toca el menú ⋮ i tria <b>Obre al navegador</b> (Chrome o Safari).</li><li>Torna a tocar <b>Instal·la</b>.</li>");
+    else if(ios)help("<li>Obre la pàgina amb <b>Safari</b>.</li><li>Toca el botó <b>Comparteix</b> (el quadrat amb la fletxa).</li><li>Tria <b>Afegeix a la pantalla d'inici</b>.</li>");
+    else help("<li>Obre la pàgina amb <b>Chrome</b>.</li><li>Toca el menú ⋮.</li><li>Tria <b>Instal·la l'aplicació</b> o <b>Afegeix a la pantalla d'inici</b>.</li>");
+  };
+})();
+</script>
 </body>
 </html>
