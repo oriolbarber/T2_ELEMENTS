@@ -648,7 +648,7 @@ body.mp #tabs,body.mp #picker{pointer-events:none;opacity:.45}
    - Classificació: més milles; en cas d'empat, menys temps.
    ========================================================= */
 const MP=(function(){
-  const $$=s=>document.querySelector(s);
+  const $$=s=>(document.getElementById("mpL").querySelector(s)||document.querySelector(s));
   const L=$$("#mpL");
   const ORDER=["planol","quisoc","parelles","classifica","penjat"];
   const GNAME={planol:"Plànol",quisoc:"Qui soc?",parelles:"Parelles",classifica:"Classifica",penjat:"Via d'aigua"};
@@ -684,23 +684,23 @@ const MP=(function(){
     const opts=[[120,"2 min"],[180,"3 min"],[300,"5 min"],[600,"10 min"]];
     const draw=()=>{
       show(`<h2>+ Jugadors</h2><p class="lead">Partida per torns al mateix dispositiu. Guanya qui fa més milles; si hi ha empat, qui ha trigat menys.</p>
-      <div class="fld"><span class="lab">Jugadors</span><div class="step"><button id="nM" aria-label="Menys jugadors">−</button><output id="nV">${cfg.n}</output><button id="nP" aria-label="Més jugadors">+</button></div></div>
+      <div class="fld"><span class="lab">Jugadors</span><div class="step"><button id="mpnM" aria-label="Menys jugadors">−</button><output id="mpnV">${cfg.n}</output><button id="mpnP" aria-label="Més jugadors">+</button></div></div>
       <div class="fld"><span class="lab">Noms</span><div class="names">${Array.from({length:cfg.n},(_,i)=>`<input id="nm${i}" maxlength="18" placeholder="Jugador ${i+1}" value="${(cfg.names[i]||"").replace(/"/g,"&quot;")}" aria-label="Nom del jugador ${i+1}">`).join("")}</div></div>
       <div class="fld"><span class="lab">Temps total per jugador</span><div class="chips">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${cfg.total===v}">${t}</button>`).join("")}</div>
         <div class="note">${cfg.rounds} rondes → <b>${fmt(perTurn())}</b> per torn.</div></div>
-      <div class="fld"><span class="lab">Rondes</span><div class="step"><button id="rM" aria-label="Menys rondes">−</button><output id="rV">${cfg.rounds}</output><button id="rP" aria-label="Més rondes">+</button></div>
+      <div class="fld"><span class="lab">Rondes</span><div class="step"><button id="mprM" aria-label="Menys rondes">−</button><output id="mprV">${cfg.rounds}</output><button id="mprP" aria-label="Més rondes">+</button></div>
         <ol class="rl">${Array.from({length:cfg.rounds},(_,r)=>`<li>${GNAME[gameOfRound(r)]}</li>`).join("")}</ol></div>
       <p class="note">Si acabes el repte abans d'hora, els segons que et sobren sumen milles segons el teu percentatge d'encerts (amb un 100%, 1 milla per segon).</p>
-      <button class="go" id="goB">Comença la partida</button>
-      <button class="go alt" id="cancelB">Tanca</button>`);
+      <button class="go" id="mpgoB">Comença la partida</button>
+      <button class="go alt" id="mpcancelB">Tanca</button>`);
       const keepNames=()=>{for(let i=0;i<cfg.n;i++){const e=document.getElementById("nm"+i);if(e)cfg.names[i]=e.value}};
-      $$("#nM").onclick=()=>{keepNames();cfg.n=Math.max(2,cfg.n-1);draw()};
-      $$("#nP").onclick=()=>{keepNames();cfg.n=Math.min(10,cfg.n+1);draw()};
-      $$("#rM").onclick=()=>{keepNames();cfg.rounds=Math.max(1,cfg.rounds-1);draw()};
-      $$("#rP").onclick=()=>{keepNames();cfg.rounds=Math.min(10,cfg.rounds+1);draw()};
+      $$("#mpnM").onclick=()=>{keepNames();cfg.n=Math.max(2,cfg.n-1);draw()};
+      $$("#mpnP").onclick=()=>{keepNames();cfg.n=Math.min(10,cfg.n+1);draw()};
+      $$("#mprM").onclick=()=>{keepNames();cfg.rounds=Math.max(1,cfg.rounds-1);draw()};
+      $$("#mprP").onclick=()=>{keepNames();cfg.rounds=Math.min(10,cfg.rounds+1);draw()};
       L.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>{keepNames();cfg.total=+b.dataset.v;draw()});
-      $$("#cancelB").onclick=()=>{keepNames();ST.set("cfg",cfg);hide()};
-      $$("#goB").onclick=()=>{keepNames();cfg.names=cfg.names.slice(0,cfg.n);ST.set("cfg",cfg);begin()};
+      $$("#mpcancelB").onclick=()=>{keepNames();ST.set("cfg",cfg);hide()};
+      $$("#mpgoB").onclick=()=>{keepNames();cfg.names=cfg.names.slice(0,cfg.n);ST.set("cfg",cfg);begin()};
     };
     draw();
   }
@@ -717,8 +717,8 @@ const MP=(function(){
       <span class="g"><i></i>${GNAME[g]}</span>
       <span class="k" style="margin-top:18px">Torn de</span><span class="n">${esc(p.name)}</span>
       <p class="note">${st.turn>0||st.round>0?"Passa el dispositiu a "+esc(p.name)+". ":""}Tens ${fmt(st.secs)}.${g==="penjat"?" Endevina 3 paraules.":""}</p></div>
-      <button class="go" id="goT">Som-hi!</button>`);
-    $$("#goT").onclick=startTurn;
+      <button class="go" id="mpgoT">Som-hi!</button>`);
+    $$("#mpgoT").onclick=startTurn;
   }
   function startTurn(){
     hide();
@@ -753,8 +753,8 @@ const MP=(function(){
       <div class="sc"><div><b>${api.turnMilles}</b><small>milles</small></div><div><b>+${bonus}</b><small>bonus de temps (${Math.round(acc*100)}% encerts)</small></div><div><b>${fmt(used)}</b><small>temps</small></div></div>
       <p class="note" style="text-align:center">Total: <b>${p.milles}</b> milles en ${fmt(p.time)}</p>
       ${ranking(false)}
-      <button class="go" id="nx">${next?"Següent torn":"Mostra el podi"}</button>`);
-    $$("#nx").onclick=next||podium;
+      <button class="go" id="mpnx">${next?"Següent torn":"Mostra el podi"}</button>`);
+    $$("#mpnx").onclick=next||podium;
   }
   function sorted(){return st.players.map((p,i)=>({...p,i})).sort((a,b)=>b.milles-a.milles||a.time-b.time)}
   function ranking(full){
@@ -767,11 +767,11 @@ const MP=(function(){
     show(`<h2 style="text-align:center">Podi</h2><p class="lead" style="text-align:center">Guanya qui fa més milles; si hi ha empat, qui triga menys.</p>
       <div class="podi">${slot(r[1],"p2")}${slot(r[0],"p1")}${slot(r[2],"p3")}</div>
       ${ranking(true)}
-      <button class="go" id="again">Revenja</button><button class="go alt" id="close">Tanca la partida</button>`);
+      <button class="go" id="mpagain">Revenja</button><button class="go alt" id="mpclose">Tanca la partida</button>`);
     if(typeof bigCelebrate==="function")bigCelebrate();else if(typeof big==="function")big();
     setTimeout(()=>{if(typeof bigCelebrate==="function")bigCelebrate();else if(typeof big==="function")big()},1300);
-    $$("#again").onclick=()=>begin();
-    $$("#close").onclick=()=>finish();
+    $$("#mpagain").onclick=()=>begin();
+    $$("#mpclose").onclick=()=>finish();
   }
   function finish(){
     api.active=false;api.running=false;clearInterval(tick);st=null;document.body.classList.remove("mp");hide();
@@ -783,10 +783,10 @@ const MP=(function(){
     const wasRunning=api.running;let pausedAt=null;
     if(wasRunning){pausedAt=left();api.running=false;clearInterval(tick)}
     show(`<h2>Sortir de la partida?</h2><p class="lead">Es perdran els resultats d'aquesta partida.</p>
-      <div class="slide" id="sl"><span class="t">Llisca per sortir</span><span class="k" id="sk">›</span></div>
-      <button class="go" id="stay">Continua jugant</button>`);
-    $$("#stay").onclick=()=>{hide();if(wasRunning){api.t0=performance.now()-(st.secs-pausedAt)*1000;api.running=true;tick=setInterval(upd,200)}};
-    const sl=$$("#sl"),k=$$("#sk");let x0=null,max=0;
+      <div class="slide" id="mpsl"><span class="t">Llisca per sortir</span><span class="k" id="mpsk">›</span></div>
+      <button class="go" id="mpstay">Continua jugant</button>`);
+    $$("#mpstay").onclick=()=>{hide();if(wasRunning){api.t0=performance.now()-(st.secs-pausedAt)*1000;api.running=true;tick=setInterval(upd,200)}};
+    const sl=$$("#mpsl"),k=$$("#mpsk");let x0=null,max=0;
     const down=e=>{x0=e.clientX;max=sl.clientWidth-56;k.setPointerCapture(e.pointerId)};
     const move=e=>{if(x0==null)return;const d=Math.max(0,Math.min(max,e.clientX-x0));k.style.transform=`translateX(${d}px)`;if(d>=max-2){x0=null;finish()}};
     const up=()=>{x0=null;k.style.transition="transform .2s";k.style.transform="";setTimeout(()=>k.style.transition="",200)};
