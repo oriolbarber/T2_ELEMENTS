@@ -656,7 +656,15 @@ const MP=(function(){
   let cfg=ST.get("cfg",{n:2,names:[],total:180,rounds:3});
   let st=null;              // estat de la partida
   let tick=null;
-  const api={active:false,running:false,turnMilles:0,words:0,ok:0,ko:0};
+  const api={active:false,running:false,finishing:false,turnId:0,turnMilles:0,words:0,ok:0,ko:0};
+  /* Temporitzadors dels jocs lligats al torn: si el torn ha canviat, el callback antic no s'executa
+     (evita que un joc del torn anterior acabi o trepitgi el torn següent). */
+  const _st=window.setTimeout.bind(window);
+  window.setTimeout=function(fn,ms,...a){
+    if(typeof fn!=="function"||!api.active)return _st(fn,ms,...a);
+    const id=api.turnId;
+    return _st(()=>{if(api.active&&api.turnId!==id)return;fn(...a)},ms);
+  };
   const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
   const nameOf=i=>(cfg.names[i]||"").trim()||("Jugador "+(i+1));
   const perTurn=()=>Math.max(15,Math.round(cfg.total/cfg.rounds));
@@ -726,6 +734,7 @@ const MP=(function(){
     current=g;
     try{(typeof renderTabs==="function"?renderTabs:renderPicker)()}catch(e){}
     streak=0;try{paint()}catch(e){}
+    api.turnId++;api.finishing=false;document.querySelectorAll(".float,.toast").forEach(e=>e.remove());
     api.turnMilles=0;api.words=0;api.ok=0;api.ko=0;api.running=true;api.t0=performance.now();
     const p=st.players[st.turn];
     $$("#mpN").textContent=p.name;$$("#mpR").textContent=`Ronda ${st.round+1}/${cfg.rounds} · ${GNAME[g]}`;$$("#mpM").textContent="0";
@@ -741,7 +750,7 @@ const MP=(function(){
     if(l<=0)endTurn(false);
   }
   function endTurn(finished){
-    if(!api.running)return;api.running=false;clearInterval(tick);
+    if(!api.running)return;api.running=false;api.finishing=false;clearInterval(tick);
     const l=Math.max(0,left()),used=Math.min(st.secs,st.secs-l),acc=api.ok+api.ko?api.ok/(api.ok+api.ko):0,bonus=finished?Math.round(l*acc):0;
     const p=st.players[st.turn];const got=api.turnMilles+bonus;
     p.milles+=got;p.time+=used;p.turns.push({g:gameOfRound(st.round),m:api.turnMilles,b:bonus,t:used});
@@ -774,12 +783,13 @@ const MP=(function(){
     $$("#mpclose").onclick=()=>finish();
   }
   function finish(){
-    api.active=false;api.running=false;clearInterval(tick);st=null;document.body.classList.remove("mp");hide();
+    api.active=false;api.running=false;api.finishing=false;api.turnId++;clearInterval(tick);st=null;document.body.classList.remove("mp");hide();
     try{(typeof renderTabs==="function"?renderTabs:renderPicker)();start()}catch(e){}
   }
 
   /* ---------- sortir amb confirmació lliscant ---------- */
   function exitConfirm(){
+    if(api.finishing)return;   // el torn ja s'està tancant: no el pausis
     const wasRunning=api.running;let pausedAt=null;
     if(wasRunning){pausedAt=left();api.running=false;clearInterval(tick)}
     show(`<h2>Sortir de la partida?</h2><p class="lead">Es perdran els resultats d'aquesta partida.</p>
@@ -804,8 +814,9 @@ const MP=(function(){
   };
   api.done=function(game){
     if(!api.running)return;
-    if(game==="penjat"){api.words++;if(api.words<3){setTimeout(()=>{if(api.running)GAMES.find(x=>x.id==="penjat").run(board())},900);return}}
-    setTimeout(()=>endTurn(true),500);
+    if(game==="penjat"){api.words++;if(api.words<3){const id=api.turnId;_st(()=>{if(api.running&&api.turnId===id)GAMES.find(x=>x.id==="penjat").run(board())},900);return}}
+    api.finishing=true;const id=api.turnId;
+    _st(()=>{if(api.turnId===id)endTurn(true)},500);
   };
   return api;
 })();
