@@ -671,9 +671,9 @@ const MP=(function(){
      (evita que un joc del torn anterior acabi o trepitgi el torn següent). */
   const _st=window.setTimeout.bind(window);
   window.setTimeout=function(fn,ms,...a){
-    if(typeof fn!=="function"||!api.active)return _st(fn,ms,...a);
+    if(typeof fn!=="function")return _st(fn,ms,...a);
     const id=api.turnId;
-    return _st(()=>{if(api.active&&api.turnId!==id)return;fn(...a)},ms);
+    return _st(()=>{if(api.turnId!==id)return;fn(...a)},ms);
   };
   const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
   const nameOf=i=>(cfg.names[i]||"").trim()||("Jugador "+(i+1));
@@ -688,7 +688,7 @@ const MP=(function(){
     return vocOk().length>0;
   }
   const playable=()=>ORDER.filter(g=>cfg.games.includes(g)&&avail(g));
-  const gameOfRound=r=>{const p=playable();return p.length?p[r%p.length]:"quisoc"};
+  const gameOfRound=r=>{const p=(st&&st.order)||playable();return p.length?p[r%p.length]:"quisoc"};
   const board=()=>document.getElementById("stage")||document.getElementById("board");
 
   /* ---------- HUD ---------- */
@@ -703,7 +703,7 @@ const MP=(function(){
   /* ---------- botó + Jugadors ---------- */
   document.getElementById("mpOpen").onclick=()=>setup();
 
-  function show(html){L.innerHTML=`<div class="box">${html}</div>`;L.hidden=false;L.scrollTop=0}
+  function show(html,keep){const y=L.scrollTop;L.innerHTML=`<div class="box">${html}</div>`;L.hidden=false;L.scrollTop=keep?y:0}
   function hide(){L.hidden=true;L.innerHTML=""}
 
   /* ---------- configuració ---------- */
@@ -711,12 +711,13 @@ const MP=(function(){
     if(api.active){exitConfirm();return}
     const opts=[[120,"2 min"],[180,"3 min"],[300,"5 min"],[600,"10 min"]];
     const draw=()=>{
+      const again=!L.hidden&&!!document.getElementById("mpGames");
       show(`<h2>+ Jugadors</h2><p class="lead">Partida per torns al mateix dispositiu. Guanya qui fa més milles; si hi ha empat, qui ha trigat menys.</p>
       <div class="fld"><span class="lab">Jugadors</span><div class="step"><button id="mpnM" aria-label="Menys jugadors">−</button><output id="mpnV">${cfg.n}</output><button id="mpnP" aria-label="Més jugadors">+</button></div></div>
       <div class="fld"><span class="lab">Noms</span><div class="names">${Array.from({length:cfg.n},(_,i)=>`<input id="nm${i}" maxlength="18" placeholder="Jugador ${i+1}" value="${(cfg.names[i]||"").replace(/"/g,"&quot;")}" aria-label="Nom del jugador ${i+1}">`).join("")}</div></div>
-      <div class="fld"><div class="sub2"><span class="lab">Jocs</span><button id="mpgAll">${cfg.games.length===ORDER.length?"Cap":"Tots"}</button></div><div class="chips" id="mpGames">${ORDER.map(g=>`<button data-g="${g}" aria-pressed="${cfg.games.includes(g)}" ${avail(g)?"":"disabled title='Cap tema d\'aquest joc seleccionat'"}>${GNAME[g]}</button>`).join("")}</div>
+      <div class="fld"><div class="sub2"><span class="lab">Jocs</span><button id="mpgAll">${cfg.games.length===ORDER.length?"Treu-los tots":"Marca'ls tots"}</button></div><div class="chips" id="mpGames">${ORDER.map(g=>`<button data-g="${g}" aria-pressed="${cfg.games.includes(g)}" ${avail(g)?"":"disabled title='Cap tema d\'aquest joc seleccionat'"}>${GNAME[g]}</button>`).join("")}</div>
         ${ORDER.some(g=>cfg.games.includes(g)&&!avail(g))?`<div class="note">${ORDER.filter(g=>cfg.games.includes(g)&&!avail(g)).map(g=>GNAME[g]).join(", ")}: no tenen prou contingut amb aquests temes i no sortiran.</div>`:""}</div>
-      <div class="fld"><div class="sub2"><span class="lab">Temes</span><button id="mptAll">${cfg.themes.length===THEMES.length?"Cap":"Tots"}</button></div><div class="chips" id="mpThemes">${THEMES.map(t=>`<button data-t="${esc(t)}" aria-pressed="${cfg.themes.includes(t)}">${esc(t)}</button>`).join("")}</div>
+      <div class="fld"><div class="sub2"><span class="lab">Temes</span><button id="mptAll">${cfg.themes.length===THEMES.length?"Treu-los tots":"Marca'ls tots"}</button></div><div class="chips" id="mpThemes">${THEMES.map(t=>`<button data-t="${esc(t)}" aria-pressed="${cfg.themes.includes(t)}">${esc(t)}</button>`).join("")}</div>
         ${playable().length?"":`<div class="note warn">Tria com a mínim un joc i un tema que hi encaixi.</div>`}</div>
       <div class="fld"><span class="lab">Temps total per jugador</span><div class="chips" id="mpTime">${opts.map(([v,t])=>`<button data-v="${v}" aria-pressed="${cfg.total===v}">${t}</button>`).join("")}</div>
         <div class="note">${cfg.rounds} rondes → <b>${fmt(perTurn())}</b> per torn.</div></div>
@@ -724,7 +725,8 @@ const MP=(function(){
         <ol class="rl">${Array.from({length:cfg.rounds},(_,r)=>`<li>${GNAME[gameOfRound(r)]}</li>`).join("")}</ol></div>
       <p class="note">Si acabes un repte abans d'hora, els segons que et sobren es guarden per al teu torn següent. A l'últim torn, el temps que sobri es converteix en milles segons el teu percentatge d'encerts (amb un 100%, 1 milla per segon).</p>
       <button class="go" id="mpgoB">Comença la partida</button>
-      <button class="go alt" id="mpcancelB">Tanca</button>`);
+      <button class="go alt" id="mpcancelB">Tanca</button>
+      <p class="note" style="text-align:center">Versió 7 · jocs que sortiran: ${playable().map(g=>GNAME[g]).join(", ")||"cap"}</p>`,again);
       const keepNames=()=>{for(let i=0;i<cfg.n;i++){const e=document.getElementById("nm"+i);if(e)cfg.names[i]=e.value}};
       $$("#mpnM").onclick=()=>{keepNames();cfg.n=Math.max(2,cfg.n-1);draw()};
       $$("#mpnP").onclick=()=>{keepNames();cfg.n=Math.min(10,cfg.n+1);draw()};
@@ -745,7 +747,7 @@ const MP=(function(){
 
   /* ---------- partida ---------- */
   function begin(){
-    st={players:Array.from({length:cfg.n},(_,i)=>({name:nameOf(i),milles:0,time:0,bank:0,turns:[]})),round:0,turn:0,secs:perTurn()};
+    st={players:Array.from({length:cfg.n},(_,i)=>({name:nameOf(i),milles:0,time:0,bank:0,turns:[]})),round:0,turn:0,secs:perTurn(),order:playable()};
     api.active=true;document.body.classList.add("mp");intro();
   }
   function intro(){
