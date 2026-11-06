@@ -20,7 +20,7 @@ Els punts (milles), les ratxes i les medalles es guarden al navegador de cada al
 Botó **+ Jugadors** (a dalt a la dreta): partida per torns al mateix dispositiu.
 
 - Es tria el nombre de jugadors (2–10), els noms, els **jocs** i els **temes** que entren, el temps total per jugador i el nombre de rondes.
-- Cada ronda és un dels jocs triats, en rotació. El temps total es reparteix entre les rondes.
+- Cada ronda és un dels jocs triats, en rotació. A cada ronda tots els jugadors tenen exactament el mateix contingut (plànol, repte, preguntes i ordre). El temps total es reparteix entre les rondes.
 - Temes: Classificació, Materials, Esforços, Estructura, Espais, Amarratge, Manteniment. Un joc sense prou contingut per als temes triats queda desactivat.
 - Si un jugador acaba el repte abans d'hora, els segons que li sobren es guarden per al seu torn següent. A l'últim torn, el temps sobrant es converteix en milles segons el percentatge d'encerts.
 - Guanya qui fa més milles; en cas d'empat, qui ha trigat menys. Al final surt el podi amb els 3 primers.
